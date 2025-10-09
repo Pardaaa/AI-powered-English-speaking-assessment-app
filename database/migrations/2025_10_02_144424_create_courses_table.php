@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Relasi ke tabel users (Dosen)
-            $table->string('name'); //  "Teknik Komunikasi Bahsa Inggris"
-            $table->string('code')->unique(); // Kode unik kelas, contoh: "IN200"
+            $table->string('name'); //  "Teknik Komunikasi Bahasa Inggris"
+            $table->string('code')->unique(); // contoh: "IN200"
             $table->string('semester'); // "Ganjil 2025/2026"
             $table->text('description')->nullable(); // Deskripsi
             $table->timestamps(); 
