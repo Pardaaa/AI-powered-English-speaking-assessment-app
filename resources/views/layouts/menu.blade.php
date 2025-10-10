@@ -1,7 +1,6 @@
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
         <a href="{{ route('dashboard') }}" class="app-brand-link">
-            {{-- DIHAPUS: Bagian logo SVG dihilangkan --}}
             <span class="app-brand-text demo menu-text fw-bolder ms-2">AI English</span>
         </a>
 
@@ -39,7 +38,6 @@
             <li class="menu-header small text-uppercase">
                 <span class="menu-header-text">Mahasiswa Area</span>
             </li>
-            {{-- Nanti link ini bisa diganti menjadi 'Enrolled Courses' --}}
             <li class="menu-item {{ request()->routeIs('submission.create') ? 'active' : '' }}">
                 <a href="{{ route('submission.create') }}" class="menu-link">
                     <i class="menu-icon tf-icons bx bx-upload"></i>
