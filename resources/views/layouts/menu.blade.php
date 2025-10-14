@@ -21,47 +21,48 @@
             </a>
         </li>
 
-        {{-- Dosen --}}
-        @if (auth()->user()->role == 'dosen')
-            <li class="menu-header small text-uppercase">
-                <span class="menu-header-text">Dosen Area</span>
-            </li>
-            <li class="menu-item {{ request()->routeIs('courses.*') ? 'active' : '' }}">
-                <a href="{{ route('courses.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-book-content"></i>
-                    <div>My Courses</div>
-                </a>
-            </li>
-        @endif
+        @auth
+            {{-- Dosen --}}
+            @if (auth()->user()->role == 'dosen')
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text">Dosen Area</span>
+                </li>
+                <li class="menu-item {{ request()->routeIs('courses.*') ? 'active' : '' }}">
+                    <a href="{{ route('courses.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-book-content"></i>
+                        <div>My Courses</div>
+                    </a>
+                </li>
+            @endif
 
-        {{-- Mahasiswa --}}
-        @if (auth()->user()->role == 'mahasiswa')
-            <li class="menu-header small text-uppercase">
-                <span class="menu-header-text">Mahasiswa Area</span>
-            </li>
-            {{-- Nanti link ini bisa diganti menjadi 'Enrolled Courses' --}}
-            <li class="menu-item {{ request()->routeIs('submission.create') ? 'active' : '' }}">
-                <a href="{{ route('submission.create') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-upload"></i>
-                    <div>Submit Assignment</div>
-                </a>
-            </li>
-        @endif
+            {{-- Mahasiswa --}}
+            @if (auth()->user()->role == 'mahasiswa')
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text">Mahasiswa Area</span>
+                </li>
+                {{-- Nanti link ini bisa diganti menjadi 'Enrolled Courses' --}}
+                <li class="menu-item {{ request()->routeIs('submission.create') ? 'active' : '' }}">
+                    <a href="{{ route('submission.create') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bx-upload"></i>
+                        <div>Submit Assignment</div>
+                    </a>
+                </li>
+            @endif
 
 
-        {{-- Admin --}}
-        @if (auth()->user()->role == 'admin')
-            <li class="menu-header small text-uppercase">
-                <span class="menu-header-text">Administration</span>
-            </li>
-            <li class="menu-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                <a href="{{ route('users.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bxs-user-detail"></i>
-                    <div>User Management</div>
-                </a>
-            </li>
-        @endif
-
+            {{-- Admin --}}
+            @if (auth()->user()->role == 'admin')
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text">Administration</span>
+                </li>
+                <li class="menu-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                    <a href="{{ route('users.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-user-detail"></i>
+                        <div>User Management</div>
+                    </a>
+                </li>
+            @endif
+        @endauth
         {{-- semua role --}}
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Account</span>

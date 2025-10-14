@@ -40,7 +40,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            <span class="tf-icons bx bx-upload"></span>&nbsp; Submit My Work
+                            <span class="tf-icons bx bx-upload"></span>
                         </button>
                         <a href="#" class="btn btn-outline-secondary">Cancel</a>
                     </form>
