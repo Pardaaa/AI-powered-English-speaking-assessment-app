@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Relasi ke tabel users (Dosen)
             $table->string('name'); //  "Teknik Komunikasi Bahasa Inggris"
-            $table->string('code')->unique(); // contoh: "IN200"
+            $table->string('code')->unique(); // "IN200"
             $table->string('semester'); // "Ganjil 2025/2026"
             $table->text('description')->nullable(); // Deskripsi
             $table->timestamps(); 

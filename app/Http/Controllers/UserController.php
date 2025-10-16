@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -36,7 +36,7 @@ class UserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'confirmed', Password::defaults()],
             'role' => ['required', 'string', Rule::in(['admin', 'dosen', 'mahasiswa'])],
         ]);
 
@@ -55,7 +55,11 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        //
+        if ($user->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        return view('courses.show', compact('course'));
     }
 
     /**
@@ -77,7 +81,7 @@ class UserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
             'role' => ['required', 'string', Rule::in(['admin', 'dosen', 'mahasiswa'])],
         ]);
 

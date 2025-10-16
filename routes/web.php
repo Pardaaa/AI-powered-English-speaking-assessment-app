@@ -4,6 +4,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AssignmentController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -20,11 +21,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::resource('users', UserController::class);
-    
+
     Route::resource('courses', CourseController::class);
+    Route::resource('courses.assignments', AssignmentController::class);
 
 
     Route::get('/submission/create', [SubmissionController::class, 'create'])->name('submission.create');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

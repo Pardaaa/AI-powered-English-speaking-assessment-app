@@ -29,19 +29,28 @@
                     <tbody class="table-border-bottom-0">
                         @forelse ($courses as $course)
                             <tr>
-                                <td><strong>{{ $course->name }}</strong></td>
+                                <td>
+                                    <a href="{{ route('courses.show', $course->id) }}">
+                                        <strong>{{ $course->name }}</strong>
+                                    </a>
+                                </td>
                                 <td><span class="badge bg-label-info me-1">{{ $course->code }}</span></td>
                                 <td>{{ $course->semester }}</td>
                                 <td>
                                     <div class="d-flex">
-                                        <a class="btn btn-icon btn-sm btn-warning me-2" href="{{ route('courses.edit', $course->id) }}" data-bs-toggle="tooltip" title="Edit Course">
+                                        <a class="btn btn-icon btn-sm btn-warning me-2"
+                                            href="{{ route('courses.edit', $course->id) }}" data-bs-toggle="tooltip"
+                                            title="Edit Course">
                                             <i class="bx bx-edit-alt"></i>
                                         </a>
 
-                                        <form action="{{ route('courses.destroy', $course->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this course?');">
+                                        <form action="{{ route('courses.destroy', $course->id) }}" method="POST"
+                                            onsubmit="return confirm('Are you sure you want to delete this course?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-icon btn-sm btn-danger" data-bs-toggle="tooltip" title="Delete Course"><i class="bx bx-trash"></i></button>
+                                            <button type="submit" class="btn btn-icon btn-sm btn-danger"
+                                                data-bs-toggle="tooltip" title="Delete Course"><i
+                                                    class="bx bx-trash"></i></button>
                                         </form>
                                     </div>
                                 </td>
