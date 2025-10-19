@@ -22,7 +22,7 @@ class Assignment extends Model
         'due_date',
     ];
 
-        protected $casts = [
+    protected $casts = [
         'due_date' => 'datetime',
     ];
 
