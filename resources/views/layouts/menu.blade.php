@@ -39,10 +39,10 @@
                 <li class="menu-header small text-uppercase">
                     <span class="menu-header-text">Mahasiswa Area</span>
                 </li>
-                <li class="menu-item {{ request()->routeIs('submission.create') ? 'active' : '' }}">
-                    <a href="{{ route('submission.create') }}" class="menu-link">
-                        <i class="menu-icon tf-icons bx bx-upload"></i>
-                        <div>Submit Assignment</div>
+                <li class="menu-item {{ request()->routeIs('student.courses.index') ? 'active' : '' }}">
+                    <a href="{{ route('student.courses.index') }}" class="menu-link">
+                        <i class="menu-icon tf-icons bx bxs-graduation"></i> 
+                        <div>My Enrolled Courses</div>
                     </a>
                 </li>
             @endif

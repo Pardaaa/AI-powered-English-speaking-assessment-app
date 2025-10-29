@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Course;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Course;
+use App\Models\Assignment;
+use Illuminate\View\View;
 
 class AssignmentController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Course $course)
     {
-        //
+        if ($course->user_id !== Auth::id()) {
+            abort(403);
+        }
     }
 
     /**
@@ -59,24 +63,60 @@ class AssignmentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Course $course, Assignment $assignment)
     {
-        //
+        if ($assignment->course_id !== $course->id || $course->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        return view('assignments.edit', compact('course', 'assignment'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Course $course, Assignment $assignment)
     {
-        //
+        if ($assignment->course_id !== $course->id || $course->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'due_date' => 'nullable|date',
+        ]);
+
+        $assignment->update($validated);
+
+        return redirect()->route('courses.show', $course->id)->with('success', 'Assignment updated successfully!');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Course $course, Assignment $assignment)
     {
-        //
+        if ($assignment->course_id !== $course->id || $course->user_id !== Auth::id()) {
+            return back()->with('error', 'You do not have permission to delete this assignment.');
+        }
+
+        $assignment->delete();
+
+        return redirect()->route('courses.show', $course->id)->with('success', 'Assignment deleted successfully!');
+    }
+
+    public function showSubmissions(Course $course, Assignment $assignment): View
+    {
+        if ($course->user_id !== Auth::id()) {
+            abort(403);
+        }
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
+
+        $assignment->load(['submissions.user']);
+
+        return view('assignments.submissions', compact('course', 'assignment'));
     }
 }

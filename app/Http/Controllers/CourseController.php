@@ -4,10 +4,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\Rule;
 
 class CourseController extends Controller
 {
@@ -58,7 +60,15 @@ class CourseController extends Controller
         if ($course->user_id !== Auth::id()) {
             abort(403);
         }
-        return view('courses.show', ['course' => $course]);
+
+
+        $availableStudents = User::where('role', 'mahasiswa')
+            ->whereDoesntHave('enrolledCourses', function ($query) use ($course) {
+                $query->where('course_id', $course->id);
+            })
+            ->orderBy('name')
+            ->get();
+        return view('courses.show', compact('course', 'availableStudents'));
     }
 
     /**
@@ -66,7 +76,7 @@ class CourseController extends Controller
      */
     public function edit(Course $course): View
     {
-        
+
         if ($course->user_id !== Auth::id()) {
             abort(403);
         }
@@ -78,7 +88,7 @@ class CourseController extends Controller
      */
     public function update(Request $request, Course $course): RedirectResponse
     {
-    
+
         if ($course->user_id !== Auth::id()) {
             abort(403);
         }
@@ -100,7 +110,7 @@ class CourseController extends Controller
      */
     public function destroy(Course $course): RedirectResponse
     {
-        
+
         if ($course->user_id !== Auth::id()) {
             abort(403);
         }
@@ -108,5 +118,47 @@ class CourseController extends Controller
         $course->delete();
 
         return redirect(route('courses.index'))->with('success', 'Course deleted successfully!');
+    }
+
+    public function enrollStudent(Request $request, Course $course)
+    {
+        if ($course->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+
+            'student_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(function ($query) {
+                    $query->where('role', 'mahasiswa');
+                }),
+            ],
+        ]);
+
+
+        if (!$course->students()->where('user_id', $validated['student_id'])->exists()) {
+            $course->students()->attach($validated['student_id']);
+            return redirect()->route('courses.show', $course->id)->with('enroll_success', 'Student enrolled successfully!');
+        }
+
+        return redirect()->route('courses.show', $course->id)->with('enroll_error', 'Student is already enrolled in this course.');
+    }
+    public function unenrollStudent(Request $request, Course $course)
+    {
+        if ($course->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'student_id' => 'required|exists:users,id',
+        ]);
+
+        $detached = $course->students()->detach($validated['student_id']);
+        if ($detached) {
+            return redirect()->route('courses.show', $course->id)->with('enroll_success', 'Student removed successfully!');
+        }
+
+        return redirect()->route('courses.show', $course->id)->with('enroll_error', 'Failed to remove student or student was not enrolled.');
     }
 }
