@@ -9,9 +9,14 @@ use App\Http\Controllers\StudentController;
 
 use Illuminate\Support\Facades\Route;
 
+// Route::get('/', function () {
+//     return view('jentestlayoutignore');
+// });
+
 Route::get('/', function () {
-    return view('jentestlayoutignore');
+    return redirect()->route('login');
 });
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');
