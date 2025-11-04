@@ -45,8 +45,10 @@
                                     {{ ucfirst($submission->status) }}
                                 </span>
                             </p>
-                            <a href="{{ Storage::disk('public')->url($submission->file_path) }}" target="_blank"
-                                class="btn btn-sm btn-outline-secondary">Download Submitted File</a>
+                            <a href="{{ asset('storage/' . $submission->file_path) }}" target="_blank"
+                            class="btn btn-sm btn-outline-secondary">
+                             Download Submitted File
+                            </a>
                         </div>
                     </div>
                 </div>
