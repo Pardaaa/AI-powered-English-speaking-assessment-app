@@ -23,6 +23,7 @@
             </div>
         @else
             <div class="row">
+                {{-- LEFT: Submission info --}}
                 <div class="col-md-5 mb-4">
                     <div class="card h-100">
                         <div class="card-header">
@@ -38,56 +39,89 @@
                             <p><strong>Status:</strong>
                                 <span
                                     class="badge
-                                @if ($submission->status == 'pending') bg-label-warning
-                                @elseif($submission->status == 'processing') bg-label-info
-                                @elseif($submission->status == 'completed') bg-label-success
-                                @elseif($submission->status == 'failed') bg-label-danger @endif me-1">
+                                        @if ($submission->status == 'pending') bg-label-warning
+                                        @elseif($submission->status == 'processing') bg-label-info
+                                        @elseif($submission->status == 'completed') bg-label-success
+                                        @elseif($submission->status == 'failed') bg-label-danger @endif me-1">
                                     {{ ucfirst($submission->status) }}
                                 </span>
                             </p>
+
                             <a href="{{ asset('storage/' . $submission->file_path) }}" target="_blank"
-                            class="btn btn-sm btn-outline-secondary">
-                             Download Submitted File
+                               class="btn btn-sm btn-outline-secondary">
+                                Download Submitted File
                             </a>
                         </div>
                     </div>
                 </div>
 
+                {{-- RIGHT: AI Assessment --}}
                 <div class="col-md-7 mb-4">
                     <div class="card h-100">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">AI Assessment Results</h5>
+
+                            @if ($submission->final_score_ai)
+                                <span class="badge bg-label-primary">
+                                    AI Score: {{ number_format($submission->final_score_ai, 2) }} / 100
+                                </span>
+                            @endif
                         </div>
                         <div class="card-body">
-                            @if ($submission->status === 'completed')
+                            @php
+                                $hasAi =
+                                    $submission->recognized_text_ai ||
+                                    $submission->accuracy_score_ai ||
+                                    $submission->fluency_score_ai ||
+                                    $submission->completeness_score_ai ||
+                                    $submission->pronunciation_score_ai ||
+                                    $submission->final_score_ai;
+                            @endphp
+
+                            @if ($hasAi)
                                 <div class="row mb-3">
-                                    <div class="col-sm-6">
-                                        <h6>Pronunciation Score:</h6>
-                                        <p class="display-6">{{ $submission->score_pronunciation_ai ?? 'N/A' }} / 100</p>
+                                    <div class="col-sm-3 mb-2">
+                                        <h6 class="mb-1">Accuracy</h6>
+                                        <p class="mb-0 fw-bold">
+                                            {{ $submission->accuracy_score_ai ?? 'N/A' }}
+                                        </p>
                                     </div>
-                                    <div class="col-sm-6">
-                                        <h6>Fluency Score:</h6>
-                                        <p class="display-6">{{ $submission->score_fluency_ai ?? 'N/A' }} / 100</p>
+                                    <div class="col-sm-3 mb-2">
+                                        <h6 class="mb-1">Fluency</h6>
+                                        <p class="mb-0 fw-bold">
+                                            {{ $submission->fluency_score_ai ?? 'N/A' }}
+                                        </p>
+                                    </div>
+                                    <div class="col-sm-3 mb-2">
+                                        <h6 class="mb-1">Completeness</h6>
+                                        <p class="mb-0 fw-bold">
+                                            {{ $submission->completeness_score_ai ?? 'N/A' }}
+                                        </p>
+                                    </div>
+                                    <div class="col-sm-3 mb-2">
+                                        <h6 class="mb-1">Pronunciation</h6>
+                                        <p class="mb-0 fw-bold">
+                                            {{ $submission->pronunciation_score_ai ?? 'N/A' }}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <h6>Transcript:</h6>
+                                <h6>Transcript (AI):</h6>
                                 <p class="bg-light p-2 rounded">
-                                    <em>{{ $submission->transcript_ai ?? 'Transcript not available.' }}</em></p>
+                                    <em>{{ $submission->recognized_text_ai ?? 'Transcript not available.' }}</em>
+                                </p>
 
-                                <h6>Mispronounced Words:</h6>
-                                @if (is_array($submission->mispronounced_words_ai) && count($submission->mispronounced_words_ai) > 0)
-                                    @foreach ($submission->mispronounced_words_ai as $word)
-                                        <span class="badge bg-label-danger me-1">{{ $word }}</span>
-                                    @endforeach
-                                @elseif(!is_array($submission->mispronounced_words_ai) && !empty($submission->mispronounced_words_ai))
-                                    <p>{{ $submission->mispronounced_words_ai }}</p>
-                                @else
-                                    <p>No mispronounced words detected.</p>
+                                @php
+                                    $audioPath = $submission->audio_path_ai ?? $submission->file_path;
+                                @endphp
+
+                                @if ($audioPath)
+                                    <h6 class="mt-3">Audio Playback:</h6>
+                                    <audio controls style="width: 100%;">
+                                        <source src="{{ asset('storage/' . $audioPath) }}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
                                 @endif
-
-                                <h6 class="mt-3">Vocabulary Report (CEFR):</h6>
-                                <p>{{ $submission->vocabulary_report_ai ?? 'Report not available.' }}</p>
                             @elseif($submission->status === 'pending' || $submission->status === 'processing')
                                 <div class="alert alert-info" role="alert">
                                     The submission is currently being processed by the AI. Please check back later for
@@ -99,13 +133,14 @@
                                     again.
                                 </div>
                             @else
-                                <p class="text-muted">Assessment results are not yet available.</p>
+                                <p class="text-muted mb-0">Assessment results are not yet available.</p>
                             @endif
                         </div>
                     </div>
                 </div>
             </div>
 
+            {{-- Lecturer feedback --}}
             @if (in_array(auth()->user()->role, ['dosen', 'admin']))
                 <div class="card">
                     <div class="card-header">
@@ -119,8 +154,8 @@
                                 <div class="col-md-3 mb-3">
                                     <label for="dosen_score" class="form-label">Score (0-100)</label>
                                     <input type="number" class="form-control" id="dosen_score" name="dosen_score"
-                                        min="0" max="100"
-                                        value="{{ old('dosen_score', $submission->score_dosen) }}">
+                                           min="0" max="100"
+                                           value="{{ old('dosen_score', $submission->score_dosen) }}">
                                 </div>
                                 <div class="col-md-9 mb-3">
                                     <label for="feedback_dosen" class="form-label">Feedback</label>
@@ -133,6 +168,5 @@
                 </div>
             @endif
         @endif
-
     </div>
 @endsection

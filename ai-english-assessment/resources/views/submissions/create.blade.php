@@ -17,7 +17,7 @@
                     <div class="card-body">
                         @if ($errors->any())
                             <div class="alert alert-danger">
-                                <ul>
+                                <ul class="mb-0">
                                     @foreach ($errors->all() as $error)
                                         <li>{{ $error }}</li>
                                     @endforeach
@@ -31,10 +31,9 @@
 
                             <div class="mb-3">
                                 <label for="submission_file" class="form-label">Select Video or Audio File</label>
-
                                 <input class="form-control @error('submission_file') is-invalid @enderror" type="file"
-                                    id="submission_file" name="submission_file"
-                                    accept="video/mp4, video/webm, audio/mpeg, audio/wav" required />
+                                       id="submission_file" name="submission_file"
+                                       accept="video/mp4, video/webm, audio/mpeg, audio/wav" required />
                                 @error('submission_file')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -46,7 +45,7 @@
                             <div class="mb-3">
                                 <label class="form-label" for="notes">Notes (Optional)</label>
                                 <textarea id="notes" class="form-control" name="notes" rows="3"
-                                    placeholder="You can add some notes for your lecturer here...">{{ old('notes') }}</textarea> {{-- Menambahkan old() --}}
+                                          placeholder="You can add some notes for your lecturer here...">{{ old('notes') }}</textarea>
                             </div>
 
                             <button type="submit" class="btn btn-primary">

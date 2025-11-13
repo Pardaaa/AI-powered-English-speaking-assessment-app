@@ -10,18 +10,29 @@ class Submission extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'assignment_id',
-        'file_path',
-        'original_filename',
-        'notes',
-        'status',
+    'user_id',
+    'assignment_id',
+    'file_path',
+    'original_filename',
+    'notes',
+    'status',
 
-    ];
+    'audio_path_ai',
+    'recognized_text_ai',
+    'accuracy_score_ai',
+    'fluency_score_ai',
+    'completeness_score_ai',
+    'pronunciation_score_ai',
+    'final_score_ai',
+];
 
-    protected $casts = [
-        'mispronounced_words_ai' => 'array',
-    ];
+protected $casts = [
+    'accuracy_score_ai'      => 'float',
+    'fluency_score_ai'       => 'float',
+    'completeness_score_ai'  => 'float',
+    'pronunciation_score_ai' => 'float',
+    'final_score_ai'         => 'float',
+];
 
 
     public function user()

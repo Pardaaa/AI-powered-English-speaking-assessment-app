@@ -17,6 +17,7 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::post('/stt', [SttController::class, 'analyze']);
 
 Route::get('/dashboard', function () {
     return view('dashboard');
