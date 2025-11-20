@@ -24,6 +24,9 @@ class Submission extends Model
     'completeness_score_ai',
     'pronunciation_score_ai',
     'final_score_ai',
+
+    'score_dosen',    
+    'feedback_dosen',  
 ];
 
 protected $casts = [

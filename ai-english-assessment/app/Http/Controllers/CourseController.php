@@ -161,4 +161,47 @@ class CourseController extends Controller
 
         return redirect()->route('courses.show', $course->id)->with('enroll_error', 'Failed to remove student or student was not enrolled.');
     }
+    public function importStudentsToCourse(Request $request, Course $course)
+    {
+        if ($course->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'student_file' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        $file = $request->file('student_file');
+
+        if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
+            $row = 0;
+            $importedCount = 0;
+            $skippedCount = 0;
+
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $row++;
+                if ($row == 1) continue;
+
+                $email = trim($data[0]);
+
+
+                $student = User::where('email', $email)->where('role', 'mahasiswa')->first();
+
+                if ($student) {
+                    if (!$course->students()->where('user_id', $student->id)->exists()) {
+                        $course->students()->attach($student->id);
+                        $importedCount++;
+                    } else {
+                        $skippedCount++;
+                    }
+                }
+            }
+            fclose($handle);
+
+            return redirect()->route('courses.show', $course->id)
+                ->with('enroll_success', "$importedCount students enrolled successfully from CSV. ($skippedCount skipped/already enrolled)");
+        }
+
+        return redirect()->route('courses.show', $course->id)->with('enroll_error', 'Failed to read file.');
+    }
 }

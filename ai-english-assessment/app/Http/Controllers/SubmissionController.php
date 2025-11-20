@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class SubmissionController extends Controller
 {
@@ -37,6 +38,7 @@ class SubmissionController extends Controller
         }
 
 
+
         return view('submissions.create', compact('assignment'));
     }
 
@@ -54,36 +56,32 @@ class SubmissionController extends Controller
                 'required',
                 'file',
                 'mimes:mp3,wav,m4a,mp4,webm',
-                'max:102400',
+                'max:102400', // 100MB
             ],
-
             'notes' => 'nullable|string',
         ]);
 
-        $file        = $request->file('submission_file');
-        $userId      = Auth::id();
+        $file = $request->file('submission_file');
+        $userId = Auth::id();
         $assignmentId = $validated['assignment_id'];
-
-        // 1. Simpan file seperti semula
         $filename = 'user' . $userId . '_assign' . $assignmentId . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs('submissions/' . $userId, $filename, 'public');
+        $path = $file->storeAs('submissions/' . $userId, $filename, 'public');
         $fullPath = Storage::disk('public')->path($path);
 
-        // 2. Panggil service Python (Flask) -> /stt
         $client = new Client([
             'base_uri' => env('PY_STT_URL', 'http://127.0.0.1:5000'),
-            'timeout'  => 90,
+            'timeout'  => 120,
         ]);
 
-        $result     = null;
+        $result = null;
         $finalScore = null;
-        $status     = 'pending';
+        $status = 'pending';
 
         try {
             $response = $client->post('/stt', [
                 'multipart' => [
                     [
-                        'name'     => 'audio', // HARUS sama dengan request.files['audio'] di Flask
+                        'name'     => 'audio',
                         'contents' => fopen($fullPath, 'r'),
                         'filename' => basename($fullPath),
                     ],
@@ -91,50 +89,40 @@ class SubmissionController extends Controller
             ]);
 
             $result = json_decode($response->getBody()->getContents(), true);
-
             Log::info('AI result', $result ?? []);
 
-            if (
-                isset($result['accuracy_score']) &&
-                isset($result['fluency_score']) &&
-                isset($result['completeness_score']) &&
-                isset($result['pronunciation_score'])
-            ) {
+            if (isset($result['accuracy_score'])) {
                 $finalScore = (
                     $result['accuracy_score'] +
                     $result['fluency_score'] +
                     $result['completeness_score'] +
                     $result['pronunciation_score']
                 ) / 4;
-
                 $status = 'completed';
             } else {
-                // AI balas tapi datanya tidak lengkap
                 $status = 'failed';
             }
         } catch (\Exception $e) {
-            // AI gagal → kita log error & tandai status failed
             Log::error('AI error: ' . $e->getMessage());
             $status = 'failed';
             $result = null;
         }
 
-        // 3. Simpan submission + hasil AI (kalau ada)
-        $submission = Submission::create([
-            'user_id'           => $userId,
-            'assignment_id'     => $assignmentId,
-            'file_path'         => $path,
+        Submission::create([
+            'user_id' => $userId,
+            'assignment_id' => $assignmentId,
+            'file_path' => $path,
             'original_filename' => $file->getClientOriginalName(),
-            'notes'             => $validated['notes'],
-            'status'            => $status,
-
-            'audio_path_ai'          => $path,
-            'recognized_text_ai'     => $result['recognized_text'] ?? null,
-            'accuracy_score_ai'      => $result['accuracy_score'] ?? null,
-            'fluency_score_ai'       => $result['fluency_score'] ?? null,
-            'completeness_score_ai'  => $result['completeness_score'] ?? null,
+            'notes' => $validated['notes'],
+            'status' => $status,
+            'audio_path_ai' => $path,
+            'recognized_text_ai' => $result['recognized_text'] ?? null,
+            'accuracy_score_ai' => $result['accuracy_score'] ?? null,
+            'fluency_score_ai' => $result['fluency_score'] ?? null,
+            'completeness_score_ai' => $result['completeness_score'] ?? null,
             'pronunciation_score_ai' => $result['pronunciation_score'] ?? null,
-            'final_score_ai'         => $finalScore,
+            'final_score_ai' => $finalScore,
+            'mispronounced_words_ai' => $result['mispronounced_words'] ?? null,
         ]);
 
         $assignment = Assignment::find($assignmentId);
@@ -147,10 +135,9 @@ class SubmissionController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Submission $submission)
+    public function show(Submission $submission): View
     {
         $submission->load(['user', 'assignment.course']);
-
 
         $user = Auth::user();
         if (!$user) {
@@ -161,36 +148,38 @@ class SubmissionController extends Controller
         $isCourseOwner = ($user->role === 'dosen' && $submission->assignment->course->user_id === $user->id);
         $isAdmin = ($user->role === 'admin');
 
-
         if (!$isOwner && !$isCourseOwner && !$isAdmin) {
             abort(403);
         }
 
-
-        return view('submissions.show', compact('submission'));
+        return view('submissions.show', [
+            'submission' => $submission
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Submission $submission)
-    {
-        //
-    }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Submission $submission)
-    {
-        //
-    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Submission $submission)
+    public function saveGrade(Request $request, Submission $submission)
     {
-        //
+        $user = Auth::user();
+
+        $isCourseOwner = ($user->role === 'dosen' && $submission->assignment->course->user_id === $user->id);
+        $isAdmin = ($user->role === 'admin');
+
+        if (!$isCourseOwner && !$isAdmin) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'dosen_score' => 'nullable|numeric|min:0|max:100',
+            'feedback_dosen' => 'nullable|string',
+        ]);
+
+        $submission->update([
+            'score_dosen' => $validated['dosen_score'],
+            'feedback_dosen' => $validated['feedback_dosen'],
+        ]);
+
+        return redirect()->route('submission.show', $submission->id)->with('grade_success', 'Feedback has been saved successfully.');
     }
 }

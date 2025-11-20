@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules;
+use Illuminate\View\View;
 
 class UserController extends Controller
 {
@@ -36,7 +37,7 @@ class UserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'string', Rule::in(['admin', 'dosen', 'mahasiswa'])],
         ]);
 
@@ -55,11 +56,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        if ($user->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        return view('courses.show', compact('course'));
+        // Tidak digunakan untuk saat ini
     }
 
     /**
@@ -67,9 +64,11 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
+
         if ($user->id === Auth::id()) {
             abort(403, 'You cannot edit your own account from this page.');
         }
+
         return view('users.edit', compact('user'));
     }
 
@@ -81,7 +80,7 @@ class UserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['nullable', 'confirmed', Password::defaults()],
+            'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'role' => ['required', 'string', Rule::in(['admin', 'dosen', 'mahasiswa'])],
         ]);
 
@@ -105,6 +104,7 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
+        // Pengecekan keamanan
         if ($user->id === Auth::id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
@@ -112,5 +112,59 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->route('users.index')->with('success', 'User has been deleted successfully.');
+    }
+
+
+    public function showImportForm(): View
+    {
+        return view('users.import');
+    }
+
+    /**
+     * Handle the import of users using native PHP (CSV Only).
+     */
+    public function importUsers(Request $request)
+    {
+        // 1. Validasi hanya menerima CSV
+        $request->validate([
+            'file_import' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        $file = $request->file('file_import');
+
+        if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
+            $row = 0;
+            $importedCount = 0;
+
+            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                $row++;
+
+                if ($row == 1) continue;
+
+                if (count($data) < 4) continue;
+
+                $name = $data[0];
+                $email = $data[1];
+                $password = $data[2];
+                $role = strtolower($data[3]); 
+
+                if (User::where('email', $email)->exists()) continue;
+                if (!in_array($role, ['admin', 'dosen', 'mahasiswa'])) $role = 'mahasiswa'; 
+
+                User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => Hash::make($password),
+                    'role' => $role,
+                ]);
+
+                $importedCount++;
+            }
+            fclose($handle);
+
+            return redirect()->route('users.index')->with('success', "$importedCount users imported successfully!");
+        }
+
+        return back()->with('error', 'Failed to read the file.');
     }
 }
