@@ -45,21 +45,23 @@ class SubmissionController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'assignment_id' => [
-                'required',
-                Rule::exists('assignments', 'id'),
-            ],
-            'submission_file' => [
-                'required',
-                'file',
-                'mimes:mp3,wav,m4a,mp4,webm',
-                'max:102400', // 100MB
-            ],
-            'notes' => 'nullable|string',
-        ]);
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'assignment_id' => [
+            'required',
+            Rule::exists('assignments', 'id'),
+        ],
+        'submission_file' => [
+            'required',
+            'file',
+            'mimes:mp3,wav,m4a,mp4,webm',
+            'mimetypes:audio/m4a,audio/x-m4a,audio/mp4,audio/mpeg,audio/wav,video/mp4,video/webm',
+            'max:102400', // 100MB
+        ],
+        'notes' => 'nullable|string',
+    ]);
+
 
         $file = $request->file('submission_file');
         $userId = Auth::id();

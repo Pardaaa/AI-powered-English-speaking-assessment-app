@@ -33,12 +33,12 @@
                                 <label for="submission_file" class="form-label">Select Video or Audio File</label>
                                 <input class="form-control @error('submission_file') is-invalid @enderror" type="file"
                                        id="submission_file" name="submission_file"
-                                       accept="video/mp4, video/webm, audio/mpeg, audio/wav" required />
+                                       accept="audio/*,video/mp4,video/webm" required />
                                 @error('submission_file')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 <div class="form-text mt-2">
-                                    Accepted file types: MP4, WebM, MP3, WAV. Max size: 100MB.
+                                    Accepted file types: MP4, WebM, MP3, WAV, M4A. Max size: 100MB.
                                 </div>
                             </div>
 
