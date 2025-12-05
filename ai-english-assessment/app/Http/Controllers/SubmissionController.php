@@ -56,12 +56,11 @@ public function store(Request $request)
             'required',
             'file',
             'mimes:mp3,wav,m4a,mp4,webm',
-            'mimetypes:audio/m4a,audio/x-m4a,audio/mp4,audio/mpeg,audio/wav,video/mp4,video/webm',
             'max:102400', // 100MB
         ],
         'notes' => 'nullable|string',
     ]);
-
+    
 
         $file = $request->file('submission_file');
         $userId = Auth::id();
@@ -125,7 +124,9 @@ public function store(Request $request)
             'pronunciation_score_ai' => $result['pronunciation_score'] ?? null,
             'final_score_ai' => $finalScore,
             'mispronounced_words_ai' => $result['mispronounced_words'] ?? null,
+            'gpt_feedback_ai' => $result['gpt_feedback'] ?? null,   // ⬅️ INI TAMBAHAN
         ]);
+
 
         $assignment = Assignment::find($assignmentId);
 

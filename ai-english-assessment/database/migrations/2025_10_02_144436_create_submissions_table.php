@@ -21,12 +21,6 @@ return new class extends Migration
 
             $table->string('status')->default('pending');
 
-            $table->text('transcript_ai')->nullable(); 
-            $table->float('score_pronunciation_ai')->nullable(); 
-            $table->float('score_fluency_ai')->nullable(); 
-            $table->json('mispronounced_words_ai')->nullable(); 
-            $table->text('vocabulary_report_ai')->nullable(); 
-
             $table->float('score_dosen')->nullable(); 
             $table->text('feedback_dosen')->nullable(); 
 

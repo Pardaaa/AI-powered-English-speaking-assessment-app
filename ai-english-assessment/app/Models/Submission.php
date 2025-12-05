@@ -27,6 +27,7 @@ class Submission extends Model
 
     'score_dosen',    
     'feedback_dosen',  
+    'gpt_feedback_ai'
 ];
 
 protected $casts = [

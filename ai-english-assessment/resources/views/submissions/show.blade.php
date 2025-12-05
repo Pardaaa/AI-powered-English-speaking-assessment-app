@@ -121,6 +121,17 @@
                                 </div>
                             </div>
 
+                            {{-- ⬇⬇⬇ BLOK BARU: PENJELASAN AI --}}
+                            @if ($submission->gpt_feedback_ai)
+                                <div class="mb-4">
+                                    <h6 class="fw-bold">AI Feedback (Gemini):</h6>
+                                    <div class="bg-label-secondary p-3 rounded text-dark" style="white-space: pre-line;">
+                                        {!! nl2br(e($submission->gpt_feedback_ai)) !!}
+                                    </div>
+                                </div>
+                            @endif
+                            {{-- ⬆⬆⬆ --}}
+
                             <div class="mb-4">
                                 <h6 class="fw-bold">Transcript (AI):</h6>
                                 <div class="bg-lighter p-3 rounded text-secondary">
