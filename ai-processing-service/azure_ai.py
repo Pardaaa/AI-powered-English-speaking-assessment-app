@@ -10,8 +10,8 @@ import threading
 # --- KONFIGURASI ---
 # GANTI dengan nilai yang valid di lingkungan produksi!
 SPEECH_REGION = "eastasia"
-SPEECH_KEY = "5tg9JYtb5Y9rQ0ZD8EQeo2WSIezzEy9tFdSxcfUA9leZLvTpnQCJJQQJ99BJAC3pKaRXJ3w3AAAYACOGMPJl"
-GEMINI_API_KEY = "AIzaSyBAnu4lNfQGUABcB9NF4ZVIL86qE0LYRmk"
+SPEECH_KEY = ""
+GEMINI_API_KEY = ""
 
 # Konfigurasi Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
