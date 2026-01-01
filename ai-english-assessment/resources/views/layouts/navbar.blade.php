@@ -31,7 +31,7 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <span class="fw-semibold d-block">{{ Auth::user()->name }}</span>
-                                        <small class="text-muted">Dosen</small> {{-- Placeholder untuk role --}}
+                                        <small class="text-muted">{{ Auth::user()->role }}</small> {{-- Placeholder untuk role --}}
                                     </div>
                                 </div>
                             </a>

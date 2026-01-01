@@ -74,11 +74,16 @@
                             </dd>
                         </dl>
                         
-                        <div class="mt-4">
-                            <a href="{{ asset('storage/' . $submission->file_path) }}" target="_blank" class="btn btn-outline-primary w-100">
-                                <i class="bx bx-download me-1"></i> Download File
-                            </a>
-                        </div>
+                                                @php
+                            $downloadUrl = \Illuminate\Support\Str::startsWith($submission->file_path, ['http://','https://'])
+                                ? $submission->file_path
+                                : \Illuminate\Support\Facades\Storage::disk('public')->url($submission->file_path);
+                        @endphp
+
+                        <a href="{{ $downloadUrl }}" target="_blank" class="btn btn-outline-primary w-100">
+                            <i class="bx bx-download me-1"></i> Download File
+                        </a>
+
                     </div>
                 </div>
             </div>
@@ -147,17 +152,6 @@
                                             <span class="badge bg-label-danger me-1 mb-1">{{ $word }}</span>
                                         @endforeach
                                     </div>
-                                </div>
-                            @endif
-                            
-                            @php $audioPath = $submission->audio_path_ai ?? $submission->file_path; @endphp
-                            @if($audioPath)
-                                <div class="mt-3">
-                                    <h6 class="fw-bold">Audio Playback:</h6>
-                                    <audio controls class="w-100">
-                                        <source src="{{ asset('storage/' . $audioPath) }}" type="audio/mpeg">
-                                        Your browser does not support the audio element.
-                                    </audio>
                                 </div>
                             @endif
 
