@@ -1,8 +1,8 @@
 import os
 import uuid
-import json
 import shutil
 import subprocess
+import time
 from urllib.parse import urlparse
 
 import ffmpeg
@@ -11,45 +11,49 @@ from flask import Flask, request, jsonify, send_from_directory
 import google.generativeai as genai
 
 # =========================
-# CONFIG
+# HARD CONFIG (TANPA ENV)
 # =========================
 SPEECH_REGION = "eastasia"
-SPEECH_KEY = "5tg9JYtb5Y9rQ0ZD8EQeo2WSIezzEy9tFdSxcfUA9leZLvTpnQCJJQQJ99BJAC3pKaRXJ3w3AAAYACOGMPJl"          # <-- WAJIB ISI
-GEMINI_API_KEY = "AIzaSyCm4et9o-g5NX5Cn7xrmAB5aZej-eHEpew"      # <-- WAJIB ISI
+SPEECH_KEY = ""
+GEMINI_API_KEY = ""
 
-UPLOAD_DIR = "uploads"   # folder file final hasil chunk merge
-TMP_DIR = "tmp"          # folder segment sementara
-CHUNK_SECONDS = 20       # potong 20 detik biar stabil
+UPLOAD_DIR = "uploads"
+TMP_DIR = "tmp"
+CHUNK_SECONDS = 20  # internal segmentation supaya stabil
 
 app = Flask(__name__)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(TMP_DIR, exist_ok=True)
 
-genai.configure(api_key=GEMINI_API_KEY)
-
 
 # =========================
 # UTIL
 # =========================
-def ensure_keys():
-    if not SPEECH_KEY:
-        return False, "SPEECH_KEY not configured"
-    if not GEMINI_API_KEY:
-        return False, "GEMINI_API_KEY not configured"
-    return True, ""
-
-
 def safe_error(message: str, status: int = 500, **extra):
     payload = {"error": message, **extra}
     return jsonify(payload), status
 
 
-def convert_to_wav(input_path: str) -> str:
-    """
-    Convert any audio/video -> wav 16khz mono pcm.
-    """
-    wav_path = os.path.join(TMP_DIR, f"{uuid.uuid4()}.wav")
+def ensure_speech_key():
+    if not SPEECH_KEY or not str(SPEECH_KEY).strip():
+        return False, "SPEECH_KEY not configured"
+    return True, ""
 
+
+def configure_gemini_optional():
+    """Gemini optional: kalau key kosong/invalid/kuota habis, skip tanpa bikin endpoint gagal."""
+    if not GEMINI_API_KEY or not str(GEMINI_API_KEY).strip():
+        return False, "GEMINI_API_KEY not configured (skip feedback)"
+    try:
+        genai.configure(api_key=str(GEMINI_API_KEY).strip())
+        return True, ""
+    except Exception as e:
+        return False, f"GEMINI configure failed: {str(e)}"
+
+
+def convert_to_wav(input_path: str) -> str:
+    """Convert audio/video -> wav 16khz mono pcm."""
+    wav_path = os.path.join(TMP_DIR, f"{uuid.uuid4()}.wav")
     (
         ffmpeg
         .input(input_path)
@@ -67,18 +71,13 @@ def convert_to_wav(input_path: str) -> str:
     return wav_path
 
 
-def split_wav(wav_path: str, out_dir: str, chunk_seconds: int = 20):
-    """
-    Split wav into segments by RE-ENCODING each segment.
-    This is more reliable than `-c copy` for long files.
-    """
+def split_wav(wav_path: str, out_dir: str, chunk_seconds: int):
+    """Split wav into segments (re-encode each) biar reliable."""
     os.makedirs(out_dir, exist_ok=True)
-
     out_pattern = os.path.join(out_dir, "seg_%03d.wav")
 
     cmd = [
-        "ffmpeg",
-        "-y",
+        "ffmpeg", "-y",
         "-i", wav_path,
         "-vn",
         "-acodec", "pcm_s16le",
@@ -97,11 +96,11 @@ def split_wav(wav_path: str, out_dir: str, chunk_seconds: int = 20):
     )
     return files
 
+
 def build_speech_config():
     speech_config = speechsdk.SpeechConfig(subscription=SPEECH_KEY, region=SPEECH_REGION)
     speech_config.speech_recognition_language = "en-US"
-
-    # make recognition end faster on silence
+    # biar cepat selesai kalau hening
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000"
     )
@@ -110,8 +109,8 @@ def build_speech_config():
 
 def recognize_text_continuous(speech_config, wav_file: str) -> str:
     """
-    Continuous STT for one segment.
-    More complete than recognize_once (which may stop early).
+    Continuous STT untuk satu segmen.
+    Tidak print per-segmen. (kamu maunya output final saja)
     """
     audio_input = speechsdk.AudioConfig(filename=wav_file)
     recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_input)
@@ -129,13 +128,14 @@ def recognize_text_continuous(speech_config, wav_file: str) -> str:
 
     def canceled_cb(evt):
         nonlocal done, err
-        # Canceled bisa EndOfStream juga; kalau error_details ada, catat
         try:
             cd = evt.result.cancellation_details
-            if cd and cd.error_details:
+            if cd and getattr(cd, "error_details", None):
                 err = f"{cd.reason} | {cd.error_details}"
-        except:
-            pass
+            else:
+                err = "canceled"
+        except Exception as e:
+            err = f"canceled (no details): {e}"
         done = True
 
     def stopped_cb(evt):
@@ -147,28 +147,38 @@ def recognize_text_continuous(speech_config, wav_file: str) -> str:
     recognizer.session_stopped.connect(stopped_cb)
 
     recognizer.start_continuous_recognition()
-    # wait loop simple
-    import time
+
     start = time.time()
     while not done:
         time.sleep(0.05)
-        # safety: max 60s per segment
-        if time.time() - start > 60:
+        # safety: max 90s per segment
+        if time.time() - start > 90:
             break
+
     recognizer.stop_continuous_recognition()
 
     text = " ".join(parts).strip()
     if not text and err:
-        raise RuntimeError(f"STT segment canceled: {err}")
+        raise RuntimeError(f"STT canceled: {err}")
     return text
 
 
+def get_wav_duration_seconds(wav_file: str) -> float:
+    cmd = [
+        "ffprobe", "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        wav_file
+    ]
+    out = subprocess.check_output(cmd).decode().strip()
+    try:
+        return float(out)
+    except:
+        return 0.0
+
 
 def pronunciation_assess_once(speech_config, wav_file: str, reference_text: str):
-    """
-    Pronunciation assessment for one segment.
-    Using reference_text = recognized text of same segment (unscripted safe).
-    """
+    """Pronunciation assessment 1 segmen (unscripted: pakai recognized text)."""
     if not reference_text:
         return None
 
@@ -184,7 +194,6 @@ def pronunciation_assess_once(speech_config, wav_file: str, reference_text: str)
     pron_config.apply_to(recognizer)
 
     res = recognizer.recognize_once_async().get()
-
     if res.reason != speechsdk.ResultReason.RecognizedSpeech:
         return None
 
@@ -197,25 +206,17 @@ def pronunciation_assess_once(speech_config, wav_file: str, reference_text: str)
     }
 
 
-def get_wav_duration_seconds(wav_file: str) -> float:
+def generate_gemini_feedback_optional(transcript, accuracy, fluency, completeness, pronunciation):
     """
-    Quick duration via ffprobe.
+    Gemini OPTIONAL: pakai prompt kamu yang rapi (tanpa markdown).
+    Boleh pakai gemini-flash-latest.
+    Kalau quota/404/error => return None (endpoint tetap sukses).
     """
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        wav_file
-    ]
-    out = subprocess.check_output(cmd).decode().strip()
-    try:
-        return float(out)
-    except:
-        return 0.0
+    ok, msg = configure_gemini_optional()
+    if not ok:
+        print("[Gemini] SKIP:", msg, flush=True)
+        return None
 
-
-def generate_gemini_feedback(transcript, accuracy, fluency, completeness, pronunciation):
-    model = genai.GenerativeModel("gemini-flash-latest")
     prompt = f"""
 Tolong analisis hasil speaking berikut menggunakan CEFR (A1–C2).
 
@@ -255,8 +256,19 @@ Catatan Penting:
 - Tidak boleh ada simbol seperti #, *, |.
 - Format harus persis seperti contoh di atas.
 - Bahasa Indonesia yang jelas dan mudah dimengerti mahasiswa.
-"""
-    return model.generate_content(prompt).text
+""".strip()
+
+    try:
+        model = genai.GenerativeModel("gemini-flash-latest")
+        resp = model.generate_content(prompt)
+        text = (getattr(resp, "text", "") or "").strip()
+        if not text:
+            print("[Gemini] empty response -> skip", flush=True)
+            return None
+        return text
+    except Exception as e:
+        print("[Gemini] ERROR:", str(e), flush=True)
+        return None
 
 
 # =========================
@@ -264,10 +276,16 @@ Catatan Penting:
 # =========================
 @app.route("/health", methods=["GET"])
 def health():
-    ok, msg = ensure_keys()
+    ok, msg = ensure_speech_key()
     if not ok:
         return safe_error(msg, 500)
-    return jsonify({"status": "ok"})
+    gem_ok, gem_msg = configure_gemini_optional()
+    return jsonify({
+        "status": "ok",
+        "speech": "ok",
+        "gemini": "ok" if gem_ok else "skip",
+        "gemini_note": "" if gem_ok else gem_msg
+    })
 
 
 @app.route("/uploads/<path:filename>")
@@ -277,7 +295,7 @@ def serve_upload(filename):
 
 @app.route("/stt_by_url", methods=["POST"])
 def stt_by_url():
-    ok, msg = ensure_keys()
+    ok, msg = ensure_speech_key()
     if not ok:
         return safe_error(msg, 500)
 
@@ -299,10 +317,10 @@ def stt_by_url():
         if not os.path.exists(input_path):
             return safe_error("file not found on server", 404, filename=filename, expected_path=input_path)
 
-        # 1) Convert to WAV
+        # 1) convert
         wav_path = convert_to_wav(input_path)
 
-        # 2) Split WAV into segments
+        # 2) split
         seg_dir = os.path.join(TMP_DIR, f"seg_{uuid.uuid4()}")
         seg_files = split_wav(wav_path, seg_dir, CHUNK_SECONDS)
         if not seg_files:
@@ -314,11 +332,9 @@ def stt_by_url():
         total_weight = 0.0
         sum_acc = sum_flu = sum_com = sum_pro = 0.0
 
-        # 3) Process each segment
+        # 3) process segments (NO per-segment print)
         for seg in seg_files:
-            seg_dur = get_wav_duration_seconds(seg)
-            if seg_dur <= 0:
-                seg_dur = CHUNK_SECONDS
+            seg_dur = get_wav_duration_seconds(seg) or float(CHUNK_SECONDS)
 
             text = recognize_text_continuous(speech_config, seg)
             if text:
@@ -336,8 +352,8 @@ def stt_by_url():
         if not recognized_text:
             return safe_error("No speech recognized", 400)
 
+        # scores weighted by duration
         if total_weight <= 0:
-            # fallback if PA failed entirely
             scores = {
                 "accuracy_score": 0.0,
                 "fluency_score": 0.0,
@@ -352,7 +368,13 @@ def stt_by_url():
                 "pronunciation_score": round(sum_pro / total_weight, 2),
             }
 
-        gpt_feedback = generate_gemini_feedback(
+        # ✅ PRINT FINAL TEXT SAJA (yang kamu minta)
+        print("\n=========== FINAL STT ===========\n", flush=True)
+        print(recognized_text, flush=True)
+        print("\n===============================\n", flush=True)
+
+        # 4) gemini optional
+        gpt_feedback = generate_gemini_feedback_optional(
             recognized_text,
             scores["accuracy_score"],
             scores["fluency_score"],
@@ -360,27 +382,32 @@ def stt_by_url():
             scores["pronunciation_score"],
         )
 
-        return jsonify({
+        if gpt_feedback:
+            print("\n=========== GEMINI FEEDBACK ===========\n", flush=True)
+            print(gpt_feedback, flush=True)
+            print("\n=====================================\n", flush=True)
+
+        payload = {
             "recognized_text": recognized_text,
             **scores,
-            "gpt_feedback": gpt_feedback
-        })
+        }
+        if gpt_feedback:
+            payload["gpt_feedback"] = gpt_feedback
+
+        return jsonify(payload)
 
     except subprocess.CalledProcessError:
         return safe_error("ffmpeg/ffprobe failed (check ffmpeg installed and file has audio)", 500)
 
     except Exception as e:
-        # ✅ balikin detail error ke Laravel supaya kamu tahu penyebabnya
         return safe_error("Internal error", 500, details=str(e))
 
     finally:
-        # cleanup temp only
         try:
             if wav_path and os.path.exists(wav_path):
                 os.remove(wav_path)
         except:
             pass
-
         try:
             if seg_dir and os.path.isdir(seg_dir):
                 shutil.rmtree(seg_dir, ignore_errors=True)
@@ -389,5 +416,5 @@ def stt_by_url():
 
 
 if __name__ == "__main__":
-    print("🚀 Flask STT + Gemini Service Running at http://127.0.0.1:5000")
+    print("🚀 Flask STT + Gemini Service Running at http://127.0.0.1:5000", flush=True)
     app.run(debug=True, host="127.0.0.1", port=5000)
