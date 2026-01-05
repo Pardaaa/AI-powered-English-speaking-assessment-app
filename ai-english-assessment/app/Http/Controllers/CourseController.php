@@ -43,8 +43,13 @@ class CourseController extends Controller
             'code' => 'required|string|max:255|unique:courses',
             'semester' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('course-images', 'public');
+            $validated['image'] = $imagePath;
+        }
 
         $request->user()->courses()->create($validated);
 

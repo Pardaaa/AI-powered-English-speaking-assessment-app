@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('code')->unique(); // "IN200"
             $table->string('semester'); // "Ganjil 2025/2026"
             $table->text('description')->nullable(); // Deskripsi
+             $table->string('image')->nullable();
             $table->timestamps(); 
         });
     }

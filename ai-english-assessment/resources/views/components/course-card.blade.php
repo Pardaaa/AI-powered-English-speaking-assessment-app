@@ -1,14 +1,11 @@
-{{-- resources/views/components/course-card.blade.php --}}
 <div class="card h-100 hover-shadow-md transition-all group border shadow-sm">
     
-    {{-- BAGIAN BANNER GAMBAR (KEMBALI KE VERSI IMG) --}}
     <div class="position-relative">
         <img class="card-img-top" 
-             src="{{ asset('assets/img/elements/2.jpg') }}" 
+             src="{{ $course->image ? asset('storage/' . $course->image) : asset('assets/img/elements/2.jpg') }}" 
              alt="Course Banner" 
              style="height: 160px; object-fit: cover;" />
              
-        {{-- Badge Kode Course --}}
         <span class="badge bg-white text-primary position-absolute top-0 end-0 m-3 shadow-sm">
             {{ $course->code }}
         </span>
@@ -18,7 +15,6 @@
         <div class="d-flex justify-content-between align-items-start mb-2">
             <h5 class="card-title mb-0 text-truncate">
                 @php
-                    // Tentukan Link berdasarkan Role
                     $route = auth()->user()->role == 'dosen' 
                         ? route('courses.show', $course->id) 
                         : route('student.courses.show', $course->id);

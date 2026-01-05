@@ -25,7 +25,7 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('courses.store') }}" method="POST">
+                        <form action="{{ route('courses.store') }}" method="POST" enctype="multipart/form-data">
                             @csrf
 
                             <div class="mb-3">
@@ -48,6 +48,12 @@
                                 <label class="form-label" for="course-description">Description</label>
                                 <textarea id="course-description" class="form-control" name="description"
                                     placeholder="Description of the course. (Optional)">{{ old('description') }}</textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="course-image">Course Cover Image (Optional)</label>
+                                <input class="form-control" type="file" id="course-image" name="image" accept="image/*">
+                                <div class="form-text">Allowed file types: png, jpg, jpeg, gif. Max size: 2MB</div>
                             </div>
 
                             <a href="{{ route('courses.index') }}" class="btn btn-outline-secondary">Cancel</a>

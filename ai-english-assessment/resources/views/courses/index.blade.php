@@ -34,7 +34,8 @@
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card h-100 hover-shadow-md transition-all">
                         <div class="position-relative">
-                            <img class="card-img-top" src="{{ asset('assets/img/elements/2.jpg') }}" alt="Course Banner"
+                            <!-- Updated Image Source to use the Model Accessor -->
+                            <img class="card-img-top" src="{{ $course->image_url }}" alt="Course Banner"
                                 style="height: 160px; object-fit: cover;" />
                             <span
                                 class="badge bg-label-primary position-absolute top-0 end-0 m-3">{{ $course->code }}</span>

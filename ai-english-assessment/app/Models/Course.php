@@ -21,7 +21,18 @@ class Course extends Model
         'code',
         'semester',
         'description',
+        'image',
     ];
+
+        public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('storage/' . $this->image);
+        }
+
+        return asset('assets/img/elements/2.jpg'); 
+
+    }
 
     public function user()
     {
