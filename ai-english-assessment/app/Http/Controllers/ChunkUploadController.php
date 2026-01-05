@@ -14,7 +14,7 @@ class ChunkUploadController extends Controller
             'chunk_index' => 'required|integer|min:0',
             'total_chunks' => 'required|integer|min:1',
             'original_name' => 'required|string',
-            'chunk' => 'required|file|max:10240', 
+            'chunk' => 'required|file|max:20480', 
         ]);
 
         $uploadId = $request->input('upload_id');
