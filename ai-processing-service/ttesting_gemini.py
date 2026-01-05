@@ -58,6 +58,7 @@ Catatan Penting:
 """
     return model.generate_content(prompt).text
 
+
 def convert_to_wav_16k_mono(input_path: str, wav_path: str):
     # lebih aman untuk speech: 16k mono PCM
     (
