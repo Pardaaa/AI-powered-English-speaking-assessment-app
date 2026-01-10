@@ -14,8 +14,8 @@ import google.generativeai as genai
 # HARD CONFIG (TANPA ENV)
 # =========================
 SPEECH_REGION = "eastasia"
-SPEECH_KEY = ""
-GEMINI_API_KEY = ""
+SPEECH_KEY = "5tg9JYtb5Y9rQ0ZD8EQeo2WSIezzEy9tFdSxcfUA9leZLvTpnQCJJQQJ99BJAC3pKaRXJ3w3AAAYACOGMPJl"
+GEMINI_API_KEY = "AIzaSyAIPHWeFLRg_3RgAuaVzoFS3TXGPFY306I"
 
 UPLOAD_DIR = "uploads"
 TMP_DIR = "tmp"

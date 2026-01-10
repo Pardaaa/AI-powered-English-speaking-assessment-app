@@ -20,7 +20,6 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 Route::middleware('auth')->group(function () {
 
-    // ✅ CHUNK UPLOAD ROUTES (web, aman dari 404 & CSRF jelas)
     Route::post('/upload/chunk', [ChunkUploadController::class, 'uploadChunk'])->name('upload.chunk');
     Route::post('/upload/complete', [ChunkUploadController::class, 'completeUpload'])->name('upload.complete');
 
