@@ -27,6 +27,18 @@ def safe_error(message: str, status: int = 500, **extra):
     payload = {"error": message, **extra}
     return jsonify(payload), status
 
+@app.route("/health", methods=["GET"])
+def health():
+    ok, msg = ensure_speech_key()
+    if not ok:
+        return safe_error(msg, 500)
+    gem_ok, gem_msg = configure_gemini_optional()
+    return jsonify({
+        "status": "ok",
+        "speech": "ok",
+        "gemini": "ok" if gem_ok else "skip",
+        "gemini_note": "" if gem_ok else gem_msg
+    })
 
 def ensure_speech_key():
     if not SPEECH_KEY or not str(SPEECH_KEY).strip():
