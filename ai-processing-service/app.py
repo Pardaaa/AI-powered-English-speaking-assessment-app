@@ -10,25 +10,19 @@ import azure.cognitiveservices.speech as speechsdk
 from flask import Flask, request, jsonify, send_from_directory
 import google.generativeai as genai
 
-# =========================
-# HARD CONFIG (TANPA ENV)
-# =========================
 SPEECH_REGION = "eastasia"
-SPEECH_KEY = "5tg9JYtb5Y9rQ0ZD8EQeo2WSIezzEy9tFdSxcfUA9leZLvTpnQCJJQQJ99BJAC3pKaRXJ3w3AAAYACOGMPJl"
-GEMINI_API_KEY = "AIzaSyAIPHWeFLRg_3RgAuaVzoFS3TXGPFY306I"
+SPEECH_KEY = ""
+GEMINI_API_KEY = ""
 
 UPLOAD_DIR = "uploads"
 TMP_DIR = "tmp"
-CHUNK_SECONDS = 20  # internal segmentation supaya stabil
+CHUNK_SECONDS = 20
 
 app = Flask(__name__)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(TMP_DIR, exist_ok=True)
 
 
-# =========================
-# UTIL
-# =========================
 def safe_error(message: str, status: int = 500, **extra):
     payload = {"error": message, **extra}
     return jsonify(payload), status
@@ -270,24 +264,6 @@ Catatan Penting:
         print("[Gemini] ERROR:", str(e), flush=True)
         return None
 
-
-# =========================
-# ROUTES
-# =========================
-@app.route("/health", methods=["GET"])
-def health():
-    ok, msg = ensure_speech_key()
-    if not ok:
-        return safe_error(msg, 500)
-    gem_ok, gem_msg = configure_gemini_optional()
-    return jsonify({
-        "status": "ok",
-        "speech": "ok",
-        "gemini": "ok" if gem_ok else "skip",
-        "gemini_note": "" if gem_ok else gem_msg
-    })
-
-
 @app.route("/uploads/<path:filename>")
 def serve_upload(filename):
     return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
@@ -317,10 +293,8 @@ def stt_by_url():
         if not os.path.exists(input_path):
             return safe_error("file not found on server", 404, filename=filename, expected_path=input_path)
 
-        # 1) convert
         wav_path = convert_to_wav(input_path)
 
-        # 2) split
         seg_dir = os.path.join(TMP_DIR, f"seg_{uuid.uuid4()}")
         seg_files = split_wav(wav_path, seg_dir, CHUNK_SECONDS)
         if not seg_files:
@@ -332,7 +306,6 @@ def stt_by_url():
         total_weight = 0.0
         sum_acc = sum_flu = sum_com = sum_pro = 0.0
 
-        # 3) process segments (NO per-segment print)
         for seg in seg_files:
             seg_dur = get_wav_duration_seconds(seg) or float(CHUNK_SECONDS)
 
@@ -352,7 +325,6 @@ def stt_by_url():
         if not recognized_text:
             return safe_error("No speech recognized", 400)
 
-        # scores weighted by duration
         if total_weight <= 0:
             scores = {
                 "accuracy_score": 0.0,
@@ -368,7 +340,6 @@ def stt_by_url():
                 "pronunciation_score": round(sum_pro / total_weight, 2),
             }
 
-        # ✅ PRINT FINAL TEXT SAJA (yang kamu minta)
         print("\n=========== FINAL STT ===========\n", flush=True)
         print(recognized_text, flush=True)
         print("\n===============================\n", flush=True)
