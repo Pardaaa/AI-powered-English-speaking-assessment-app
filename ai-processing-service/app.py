@@ -47,7 +47,6 @@ def ensure_speech_key():
 
 
 def configure_gemini_optional():
-    """Gemini optional: kalau key kosong/invalid/kuota habis, skip tanpa bikin endpoint gagal."""
     if not GEMINI_API_KEY or not str(GEMINI_API_KEY).strip():
         return False, "GEMINI_API_KEY not configured (skip feedback)"
     try:
@@ -58,7 +57,6 @@ def configure_gemini_optional():
 
 
 def convert_to_wav(input_path: str) -> str:
-    """Convert audio/video -> wav 16khz mono pcm."""
     wav_path = os.path.join(TMP_DIR, f"{uuid.uuid4()}.wav")
     (
         ffmpeg
@@ -78,7 +76,6 @@ def convert_to_wav(input_path: str) -> str:
 
 
 def split_wav(wav_path: str, out_dir: str, chunk_seconds: int):
-    """Split wav into segments (re-encode each) biar reliable."""
     os.makedirs(out_dir, exist_ok=True)
     out_pattern = os.path.join(out_dir, "seg_%03d.wav")
 
@@ -106,7 +103,6 @@ def split_wav(wav_path: str, out_dir: str, chunk_seconds: int):
 def build_speech_config():
     speech_config = speechsdk.SpeechConfig(subscription=SPEECH_KEY, region=SPEECH_REGION)
     speech_config.speech_recognition_language = "en-US"
-    # biar cepat selesai kalau hening
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2000"
     )
@@ -114,10 +110,6 @@ def build_speech_config():
 
 
 def recognize_text_continuous(speech_config, wav_file: str) -> str:
-    """
-    Continuous STT untuk satu segmen.
-    Tidak print per-segmen. (kamu maunya output final saja)
-    """
     audio_input = speechsdk.AudioConfig(filename=wav_file)
     recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_input)
 
@@ -157,7 +149,6 @@ def recognize_text_continuous(speech_config, wav_file: str) -> str:
     start = time.time()
     while not done:
         time.sleep(0.05)
-        # safety: max 90s per segment
         if time.time() - start > 90:
             break
 
@@ -184,7 +175,6 @@ def get_wav_duration_seconds(wav_file: str) -> float:
 
 
 def pronunciation_assess_once(speech_config, wav_file: str, reference_text: str):
-    """Pronunciation assessment 1 segmen (unscripted: pakai recognized text)."""
     if not reference_text:
         return None
 
@@ -213,11 +203,6 @@ def pronunciation_assess_once(speech_config, wav_file: str, reference_text: str)
 
 
 def generate_gemini_feedback_optional(transcript, accuracy, fluency, completeness, pronunciation):
-    """
-    Gemini OPTIONAL: pakai prompt kamu yang rapi (tanpa markdown).
-    Boleh pakai gemini-flash-latest.
-    Kalau quota/404/error => return None (endpoint tetap sukses).
-    """
     ok, msg = configure_gemini_optional()
     if not ok:
         print("[Gemini] SKIP:", msg, flush=True)
@@ -356,7 +341,6 @@ def stt_by_url():
         print(recognized_text, flush=True)
         print("\n===============================\n", flush=True)
 
-        # 4) gemini optional
         gpt_feedback = generate_gemini_feedback_optional(
             recognized_text,
             scores["accuracy_score"],

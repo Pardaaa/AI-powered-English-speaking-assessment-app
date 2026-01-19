@@ -46,10 +46,8 @@ class SubmissionController extends Controller
         $assignmentId = (int) $validated['assignment_id'];
         $fileUrl = trim($validated['uploaded_url']);
 
-        // ✅ prioritas: nama asli dari JS
         $originalName = $validated['original_filename'] ?? null;
 
-        // ✅ fallback: ambil basename dari URL (uuid.mp4)
         if (!$originalName) {
             try {
                 $path = parse_url($fileUrl, PHP_URL_PATH);
@@ -113,16 +111,13 @@ class SubmissionController extends Controller
             'user_id' => $userId,
             'assignment_id' => $assignmentId,
 
-            // ✅ simpan URL file final
             'file_path' => $fileUrl,
 
-            // ✅ simpan nama asli file user
             'original_filename' => $originalName,
 
             'notes' => $validated['notes'] ?? null,
             'status' => $status,
 
-            // (opsional) jika kolom audio_path_ai kamu ada
             'audio_path_ai' => $fileUrl,
 
             'recognized_text_ai' => $result['recognized_text'] ?? null,

@@ -125,7 +125,6 @@ class UserController extends Controller
      */
     public function importUsers(Request $request)
     {
-        // 1. Validasi hanya menerima CSV
         $request->validate([
             'file_import' => 'required|file|mimes:csv,txt|max:2048',
         ]);
